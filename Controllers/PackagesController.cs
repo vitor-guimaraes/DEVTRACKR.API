@@ -8,6 +8,8 @@ using DEVTRACKR.API.Persistence;
 using DEVTRACKR.API.Persistence.Repository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SendGrid;
+using SendGrid.Helpers.Mail;
 
 namespace DEVTRACKR.API.Controllers
 {
@@ -22,9 +24,18 @@ namespace DEVTRACKR.API.Controllers
         // }
 
         private readonly IPackageRepository _repository;
-        public PackagesController(IPackageRepository repository)
+
+        private readonly ISendGridClient _client;
+
+        // public PackagesController(IPackageRepository repository)
+        // {
+        //     _repository =  repository; 
+        // }
+
+        public PackagesController(IPackageRepository repository, ISendGridClient client)
         {
-            _repository =  repository; 
+            _repository =  repository;
+            _client = client;
         }
 
         [HttpGet]
@@ -52,7 +63,12 @@ namespace DEVTRACKR.API.Controllers
         }
 
         [HttpPost]
-        public IActionResult Post(AddPackageInputModel model){
+        /// <summary>
+        /// CADASTRO DE UM PACOTE
+        /// </summary>
+        /// <param name="model">Dados do pacote</param>
+        /// <returns>Objeto recém criado</returns>
+        public async Task<IActionResult> Post(AddPackageInputModel model){
             if(model.Title.Length < 10){
                 return BadRequest("Title lenght must be at least 10 characters long.");
             }
@@ -62,6 +78,15 @@ namespace DEVTRACKR.API.Controllers
 
             _repository.Add(package);
 
+            var message = new SendGridMessage {
+                From = new EmailAddress("email", "nickname"),
+                Subject = "Your package was dispatched.",
+                PlainTextContent = $"Your Package with codw {package.Code} was dispatched."
+            };
+
+            message.AddTo(model.SenderEmail, model.SenderName);
+
+            await _client.SendEmailAsync(message);
 
             return CreatedAtAction("GetByCode", new { code = package.Code }, package);
         }
@@ -72,7 +97,7 @@ namespace DEVTRACKR.API.Controllers
         // }
 
         [HttpPost("{code}/updates")]
-        public IActionResult PostUpdate(string code, AddPackageUpdateInputModel model){
+        public async Task<IActionResult> PostUpdate(string code, AddPackageUpdateInputModel model){
             // var package = new Package("Pacote 1", 1.2M);
 
             // var package = _context.Packages.SingleOrDefault(p => p.Code == code);
@@ -88,6 +113,16 @@ namespace DEVTRACKR.API.Controllers
                 return NotFound();
             
             package.AddUpdate(model.Status, model.Delivered);
+
+            var message = new SendGridMessage {
+                From = new EmailAddress("email", "nickname"),
+                Subject = "Your package has been updated." ,
+                PlainTextContent = $"{package.Code} has been updated"
+            };
+
+            message.AddTo(model.SenderEmail, model.SenderName);
+
+            await _client.SendEmailAsync(message);
 
             _repository.Update(package);
 

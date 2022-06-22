@@ -33,8 +33,6 @@ namespace DEVTRACKR.API.Entities
         public decimal Weight {get; private set;}
         public bool Delivered {get; private set;}
         public DateTime PostedAt {get; private set;}
-
         public List<PackageUpdate> Updates { get; private set; }
-
     }
 }
