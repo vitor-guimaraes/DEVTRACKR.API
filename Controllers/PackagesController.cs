@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using DEVTRACKR.API.Entities;
 using DEVTRACKR.API.Models;
 using DEVTRACKR.API.Persistence;
+using DEVTRACKR.API.Persistence.Repository;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DEVTRACKR.API.Controllers
 {
@@ -13,10 +15,16 @@ namespace DEVTRACKR.API.Controllers
     [Route("api/packages")]
     public class PackagesController : ControllerBase
     {
-        private readonly DevTrackRContext _context;
-        public PackagesController(DevTrackRContext context)
+        // private readonly DevTrackRContext _context;
+        // public PackagesController(DevTrackRContext context)
+        // {
+        //     _context =  context; 
+        // }
+
+        private readonly IPackageRepository _repository;
+        public PackagesController(IPackageRepository repository)
         {
-            _context =  context; 
+            _repository =  repository; 
         }
 
         [HttpGet]
@@ -25,7 +33,9 @@ namespace DEVTRACKR.API.Controllers
             //     new Package("Pack 1", 1.3M),
             //     new Package("Pack 2", 0.2M)
             // };
-            var packages = _context.Packages;
+            // var packages = _context.Packages;
+
+            var packages = _repository.GetAll();
 
             return Ok(packages);
         }
@@ -33,9 +43,11 @@ namespace DEVTRACKR.API.Controllers
         [HttpGet("{code}")]
         public IActionResult GetByCode(string code){ 
         //    var package = new Package("Pack 2", 0.2M);
-        var package = _context.Packages.SingleOrDefault(p => p.Code == code);
-        if (package == null)
-            return NotFound();
+        // var package = _context.Packages.Include(p => p.Updates).SingleOrDefault(p => p.Code == code);
+        // if (package == null)
+        //     return NotFound();
+
+        var package = _repository.GetByCode(code);
         return Ok(package);
         }
 
@@ -45,7 +57,12 @@ namespace DEVTRACKR.API.Controllers
                 return BadRequest("Title lenght must be at least 10 characters long.");
             }
             var package = new Package(model.Title, model.Weight);
-            _context.Packages.Add(package);
+            // _context.Packages.Add(package);
+            // _context.SaveChanges();
+
+            _repository.Add(package);
+
+
             return CreatedAtAction("GetByCode", new { code = package.Code }, package);
         }
 
@@ -57,11 +74,23 @@ namespace DEVTRACKR.API.Controllers
         [HttpPost("{code}/updates")]
         public IActionResult PostUpdate(string code, AddPackageUpdateInputModel model){
             // var package = new Package("Pacote 1", 1.2M);
-            var package = _context.Packages.SingleOrDefault(p => p.Code == code);
+
+            // var package = _context.Packages.SingleOrDefault(p => p.Code == code);
+            // if (package == null)
+            //     return NotFound();
+
+            // package.AddUpdate(model.Status, model.Delivered);
+            // _context.SaveChanges();
+
+            var package = _repository.GetByCode(code);
+
             if (package == null)
                 return NotFound();
-
+            
             package.AddUpdate(model.Status, model.Delivered);
+
+            _repository.Update(package);
+
             return Ok();
         }
     }   

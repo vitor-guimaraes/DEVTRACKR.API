@@ -1,9 +1,17 @@
 using DEVTRACKR.API.Persistence;
+using DEVTRACKR.API.Persistence.Repository;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddSingleton<DevTrackRContext>();
+var connectionString = builder.Configuration.GetConnectionString("DevTrackrCs");
+builder.Services.AddDbContext<DevTrackRContext>(o => o.UseInMemoryDatabase("DevTrackrCs"));
+// builder.Services.AddSingleton<DevTrackRContext>();
+
+// builder.Services.AddDbContext<DevTrackRContext>(o => o.UseSqlServer(connectionString)); //RODAR COM MONGODB
+
+builder.Services.AddScoped<IPackageRepository, PackageRepository>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
